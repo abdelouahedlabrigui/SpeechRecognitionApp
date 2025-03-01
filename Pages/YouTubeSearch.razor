@@ -1,0 +1,97 @@
+@page "/youtube-search"
+@inject HttpClient Http
+
+<style>
+    .card-header{
+        background-color: black;
+        color: white;
+        text-align: center;
+    }
+    .news-image {
+        max-width: 350px;
+        height: auto;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+</style>
+
+<div class="form-group">
+        <label for="SearchString">SearchString</label>
+        <input type="text" @bind="SearchString" autocomplete="off" spellcheck="false" class="form-control-plaintext" />
+    </div>
+    <hr>
+    <div class="form-group">
+        <button class="form-control-plaintext btn-sm bg-dark text-white" @onclick="SearchSavedYouTubeVideos">Search</button>
+    </div>
+    <hr>
+    <div class="card-header">
+        <h4>Search Results</h4>
+    </div>
+    <div class="card-body">
+        @if (queryResults?.Count > 0)
+        {
+            <table class="table">
+                <thead class="table bg-dark text-white">
+                    <tr>
+                        <th>Video Id</th>
+                        <th>Title</th>
+                        <th>ThumbnailUrl</th>
+                        <th>Description</th>
+                        <th>Published At</th>
+                        <th>Channel Title</th>
+                        @* <th>Action</th> *@
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var result in queryResults)
+                    {
+                        <tr>
+                            <td>@result.VideoId</td>
+                            <td>@result.Title</td>
+                            <td>
+                                <img src="@result.ThumbnailUrl" alt="News Image" class="news-image" />
+                            </td>
+                            <td>@result.Description</td>
+                            <td>Published At: @result.PublishedAt, Duration: @result.Duration</td>
+                            <td>@result.ChannelTitle</td>
+                            @* <td>
+                                <ul>
+                                    <li><a asp-page="/YouTubeSearch/VideoDetails" asp-route-videoId="@result.VideoId" class="btn btn-primary">View</a></li>
+                                </ul>
+                            </td> *@
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No search results found or unable to fetch data.</p>
+        }
+    </div>
+
+
+@code{
+    public string? SearchString {get;set;}
+    private List<QueryResult>? queryResults = new();
+    private async Task SearchSavedYouTubeVideos(){
+        if(!string.IsNullOrWhiteSpace(SearchString)){
+            try{
+                queryResults = await Http.GetFromJsonAsync<List<QueryResult>>($"http://localhost:5082/api/YouTubeApiSearch/search-saved-yt-videos?search={SearchString}");
+            } catch(Exception ex){
+                Console.WriteLine(ex.Message);
+            }
+        }
+    }
+    public class QueryResult
+    {
+        public int Id { get; set; }
+        public string? VideoId { get; set; }
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public string? PublishedAt { get; set; }
+        public string? ChannelTitle { get; set; }
+        public string? ThumbnailUrl { get; set; } // Added ThumbnailUrl
+        public TimeSpan Duration { get; set; } //Added Duration
+    }
+}

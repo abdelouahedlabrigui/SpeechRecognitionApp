@@ -1,0 +1,647 @@
+@page "/text-reader"
+@inject HttpClient Http
+
+<style>
+    #idSentence{
+        background-color: whitesmoke; color: black; font-weight: bold;
+    }
+    #idPositive{
+        background-color: lightgreen; color: black;
+    }
+    #idNegative{
+        background-color: lightgrey; color: black;
+    }
+    #idNeutral{
+        background-color: lightcyan; color: black;
+    }
+    #idCompound{
+        background-color: lightcoral; color: black;
+    }
+    #fullText{
+        text-align: justify; font-weight: bolder; font-size: small;
+    }
+    textarea{
+        
+    }
+    table{
+        background-color: whitesmoke;        
+    }
+    thead{
+        background-color: black;
+        color: white;
+    }
+    tbody{
+        font-weight: bolder;
+        
+    }
+    #sentence {
+        font-size: small;
+    }
+</style>
+
+<h3>Text Fetcher</h3>
+
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card-header">
+            <h3>Search:</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="Param">Param.</label>
+                <input type="text" class="form-control-plaintext" @bind="Param" placeholder="Enter Param" spellcheck="false" autocomplete="off">
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <button @onclick="FetchDataById" class="btn btn-lg btn-block bg-dark text-white">Get by Id</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button @onclick="FetchDataBySearch" class="btn btn-lg btn-block bg-dark text-white">Search</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button @onclick="DeleteDataById" class="btn btn-lg btn-block bg-dark text-white">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="card-header">
+            <h3>Speech:</h3>
+        </div>
+        <hr>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="TextFile">Text File</label>
+                        <InputFile OnChange="LoadFile" class="form-control-plaintext" />
+                    </div>
+                    <hr>
+                    <select @bind="SelectedVoice" id="" class="form-control-plaintext">
+                        <option value="en-US">English</option>
+                        <option value="es-ES">Spanish</option>
+                        <option value="fr-FR">French</option>
+                    </select>
+                    <hr>
+                </div>
+                <div class="col">
+                    <div class="row">                        
+                        <div class="col">
+                            <div class="form-group">
+                                <label for="Volume">Volume</label>
+                                <input type="range" min="0" max="10" step="1" @bind="Volume" class="form-control-plaintext" spellcheck="false" autocomplete="off">
+                            </div>    
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label for="Rate">Rate</label>
+                                <input type="range" min="1" max="10" step="1" @bind="Rate" class="form-control-plaintext" spellcheck="false" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="Speak">Speak</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="Pause">Pause</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="Resume">Resume</button>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="FilePath">File Path</label>
+                <input type="text" class="form-control-plaintext" @bind="FilePath" placeholder="Enter File Path" spellcheck="false" autocomplete="off">    
+            </div> 
+            <hr>
+            <div class="form-group">
+                <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="LoadRepoFiles">Display files.</button>
+            </div>
+            <hr>
+            @if (plainTexts.Count > 0){
+                <table class="table table-striped">
+                    <thead class="table text-white">
+                        <tr>
+                            <th>Full Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var files in plainTexts){
+                            <tr>
+                                <td style="font-size:smaller;">@files.FullAddress</td>
+                                
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <hr>
+            <div class="form-group">
+                <label for="Role">Role</label>
+                <input type="text" @oninput="OnRoleChanged" class="form-control-plaintext" spellcheck="false" autocomplete="off">
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="Response">Response</label>
+                <input type="text" @oninput="OnResponseChanged" class="form-control-plaintext" spellcheck="false" autocomplete="off">
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="GenerateTextTranslation">Generate Translation</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="GenerateTextSentiments">Generate Sentiments</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card-header">
+            <h3>Text Display:</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="CurrentSentence">Text</label>                
+                <textarea 
+                    style="font-weight: bolder; font-family: 'Cascadia Code', monospace; font-weight: bold; color: black; text-align: justify; font-size: larger; background-color: whitesmoke;"
+                    class="form-control" spellcheck="false" autocomplete="off" id="currentSentence" rows="10"></textarea>
+                <input type="text" @bind="CurrentSentence" class="form-control-plaintext" spellcheck="false" autocomplete="off" id="currentSentenceInput">
+            </div>
+            <hr>
+            <div class="row">                
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn bg-dark text-white form-control-plaintext btn-sm" @onclick="GenerateQuestionAnswering">Generate Question Answering</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    @if(requestResponse != null){
+                        <pre style="background-color: black; color: whitesmoke;">@requestResponse.Message</pre>
+                    }
+                </div>
+            </div>              
+        </div>
+        <hr>
+        @if(requestResponse != null){
+            <p>@requestResponse.Message"</p>
+        }
+        <hr>
+        @if (generatedTextFeatures != null){
+            <div class="card-header">
+                <h3>Generated Text: </h3><br> <p><i>@generatedTextFeatures.Text</i></p> | <a href="http://localhost:5082/api/TextToSpeechApi/text-to-speech?text=@generatedTextFeatures.Text" class="text-dark">Speak</a>
+            </div>
+            <div class="row">
+                <div class="col-md-4">                    
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead class="table text-white">
+                                <tr>
+                                    <th>Text</th>
+                                    <th>Label</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var item in generatedTextFeatures?.Entities?.Distinct() ?? new List<Entity>()){
+                                    <tr>
+                                        <td>@item.Text</td>
+                                        <td>@item.Label</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead class="table text-white">
+                                <tr>
+                                    <th>Sentence</th>
+                                    <th>Positive</th>
+                                    <th>Negative</th>
+                                    <th>Neutral</th>
+                                    <th>Compound</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var item in generatedTextFeatures?.Sentiments ?? new List<Sentiment>()) {
+                                    <tr>
+                                        <td><p id="sentence">@item.Sentence</p></td>
+                                        <td style="color: blue;">@item.Positive</td>
+                                        <td style="color: black;">@item.Negative</td>
+                                        <td style="color: green;">@item.Neutral</td>
+                                        <td style="color: rgb(255, 49, 84);">@item.Compound</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        <hr>    
+          
+        @if (Data != null)
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="card-header bg-dark text-white">
+                        <h4>English Text</h4>
+                    </div>
+                    <div class="card-body bg-hover">
+                        <p id="fullText">@Data.EnglishText</p>
+                    </div>
+                    <div class="card-footer bg-dark text-white">
+                        <a class="text-white" href="http://localhost:5082/api/TextToSpeechApi/text-to-speech?text=@Data.EnglishText" target="_blank">EN - Speak</a>
+                    </div>
+                    <hr>
+                    <div class="card-header">
+                        <h4>Entities</h4> 
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col">
+                                <h4>English</h4>
+                                <ul>
+                                    @foreach (var entity in Data.Entities ?? new List<MultilingualEntity>())
+                                    {
+                                        @foreach (var e in entity.English ?? new List<Entity>())
+                                        {
+                                            <li>@e.Text (@e.Label)</li>
+                                        }
+                                    }
+                                </ul>
+                            </div>
+                            <div class="col">
+                                <h4>Spanish</h4>
+                                <ul>
+                                    @foreach (var entity in Data.Entities ?? new List<MultilingualEntity>())
+                                    {
+                                        @foreach (var e in entity.Spanish ?? new List<Entity>())
+                                        {
+                                            <li>@e.Text (@e.Label)</li>
+                                        }
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card-header bg-dark text-white">
+                        <h4>Spanish Text</h4>
+                    </div>
+                    <div class="card-body bg-hover">
+                        <p id="fullText">@Data.SpanishText</p>
+                    </div>
+                    <div class="card-footer bg-dark text-white">
+                        <a class="text-white" href="http://localhost:5082/api/TextToSpeechApi/spanish-text-to-speech?text=@Data.SpanishText" target="_blank">ES - Speak</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                     <div class="card-header">
+                        <h4>English Sentiments</h4>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead class="table bg-dark text-white">
+                                <th>Sentence</th>
+                                <th>Sentiments</th>
+                            </thead>
+                            <tbody>
+                                @foreach (var sentiment in Data.Sentiments ?? new List<MultilingualSentiment>())
+                                {
+                                    @foreach (var s in sentiment.English ?? new List<Sentiment>())
+                                    {
+                                        <tr>
+                                            <td><i id="idSentence">@s.Sentence</i></td>
+                                            <td><b id="idPositive">Positive: @s.Positive</b><br/><b id="idNegative">Negative: @s.Negative</b><br/><b id="idNeutral">Neutral: @s.Neutral</b><br/><b id="idCompound">Compound: @s.Compound</b></td>
+                                        </tr>
+                                    }
+                                }
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card-header">
+                        <h4>Spanish Sentiments</h4>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead class="table bg-dark text-white">
+                                <th>Sentence</th>
+                                @* <th>Sentiments</th> *@
+                            </thead>
+                            <tbody>
+                                @foreach (var sentiment in Data.Sentiments ?? new List<MultilingualSentiment>())
+                                {
+                                    @foreach (var s in sentiment.Spanish ?? new List<Sentiment>())
+                                    {
+                                        @if(s.Sentence?.Length > "de la tecnología de red de red.".Length){
+                                            <tr>
+                                                <td><i id="idSentence">@s.Sentence</i></td>
+                                                @* <td><b id="idPositive">Positive: @s.Positive</b><br/><b id="idNegative">Negative: @s.Negative</b><br/><b id="idNeutral">Neutral: @s.Neutral</b><br/><b id="idCompound">Compound: @s.Compound</b></td> *@
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string Param { get; set; } = string.Empty;
+    private NlpMultilingualText? Data;
+    private List<NlpMultilingualText>? ListData = new();
+    private RequestResponse? requestResponse;
+    private List<GeneratedText>? generatedTexts;
+    private string TextContent = string.Empty;
+    private string SelectedVoice = "en-US";
+    private int Volume = 6;
+    private int Rate = 4;
+    private string CurrentSentence {get;set;} = string.Empty;
+    private Queue<string> Sentences = new();
+    @* private SpeechSynthesizer speechSynthesizer = new SpeechSynthesizer(); *@
+    private string TextString {get;set;} = string.Empty;
+    private string Role {get;set;} = string.Empty;
+    private string Response {get;set;} = string.Empty;
+    private IBrowserFile? UploadedFile;
+    private DotNetObjectReference<TextReader>? objRef;
+    private GeneratedTextFeatures generatedTextFeatures = new();
+    private List<string> labels = new List<string>() {"person", "non_gpe", "nationalities", "buildings", "companies", "countries"};
+
+    private string FilePath {get;set;} = string.Empty;
+    private string TextFile {get;set;} = string.Empty; 
+    private string Label {get;set;} = string.Empty;
+    private string EntitySearchString {get;set;} = string.Empty; 
+    private string SearchString {get;set;} = string.Empty;
+    private List<PlainTextMetadata> plainTexts = new();
+    private List<PartOfSpeech> partOfSpeeches = new();
+
+    protected override void OnInitialized()
+    {
+        objRef = DotNetObjectReference.Create(this);
+    }
+
+    private bool IsPaused = false;
+
+    @* private void OnTextStringChanged(ChangeEventArgs e)
+    {
+        TextString = e.Value?.ToString() ?? string.Empty; // Handle nulls safely   
+        Console.WriteLine($"TestInputValue: {TextString}");     
+    } *@
+
+    private void OnRoleChanged(ChangeEventArgs e)
+    {
+        Role = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnResponseChanged(ChangeEventArgs e)
+    {
+        Response = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task LoadFile(InputFileChangeEventArgs e)
+    {
+        var inputFile = e.File; // ✅ Correct way to get the file
+
+        if (inputFile != null)
+        {
+            UploadedFile = inputFile;
+
+            // Read file content
+            using var stream = UploadedFile.OpenReadStream();
+            using var reader = new StreamReader(stream);
+            var content = await reader.ReadToEndAsync();
+
+            // Split into sentences
+            Sentences = new Queue<string>(content.Split('.'));
+        }
+    }
+
+    // Speak Text
+    private async Task Speak()
+    {
+        if (Sentences.Count > 0)
+        {
+            string textToSpeak = string.Join(".", Sentences);
+            if (objRef != null)
+            {
+                await JS.InvokeVoidAsync("speechHelper.speakText", textToSpeak, SelectedVoice, Rate, Volume, objRef);
+            }
+        }
+    }
+
+    // Pause Speech
+    private async Task Pause()
+    {
+        await JS.InvokeVoidAsync("speechHelper.pauseSpeech");
+    }
+
+    // Resume Speech
+    private async Task Resume()
+    {
+        await JS.InvokeVoidAsync("speechHelper.resumeSpeech");
+    }
+    [JSInvokable]
+    public void UpdateSentence(string sentence)
+    {
+        CurrentSentence = sentence;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+    private async Task FetchDataById()
+    {
+        if (!string.IsNullOrEmpty(Param))
+        {            
+            Data = await Http.GetFromJsonAsync<NlpMultilingualText>($"http://localhost:5082/api/TextGeneration/get-generated-text?id={Param}");
+        }
+    }
+    private async Task FetchDataBySearch()
+    {
+        if (!string.IsNullOrEmpty(Param))
+        {            
+            ListData = await Http.GetFromJsonAsync<List<NlpMultilingualText>>($"http://localhost:5082/api/TextGeneration/search-generated-text?search={Param}");
+        }
+    }
+
+    private async Task DeleteDataById()
+    {
+        if (!string.IsNullOrEmpty(Param))
+        {            
+            requestResponse = await Http.GetFromJsonAsync<RequestResponse>($"http://localhost:5082/api/TextGeneration/delete-generated-text?id={Param}");
+        }
+    }
+
+    
+    
+    private async Task LoadRepoFiles() {
+        if(!string.IsNullOrWhiteSpace(FilePath)){
+            plainTexts = await Http.GetFromJsonAsync<List<PlainTextMetadata>>($"http://localhost:5082/api/TextToSpeechApi/get-files?filePath={FilePath}");
+        }
+    }
+    private async Task GenerateTextSentiments(){
+        if (!string.IsNullOrWhiteSpace(CurrentSentence) || 
+                !string.IsNullOrWhiteSpace(Role) || 
+            !string.IsNullOrWhiteSpace(Response)) {
+            try{
+                generatedTextFeatures = await Http.GetFromJsonAsync<GeneratedTextFeatures>($"http://localhost:5082/api/TextGeneration/generate-text-without-translation?text={Uri.EscapeDataString(CurrentSentence)}&actor={Uri.EscapeDataString(Role)}&response={Uri.EscapeDataString(Response)}");
+            } catch (Exception ex){
+                Console.WriteLine($"Error: {ex.Message}");
+            }    
+        }
+    }
+
+    private async Task GenerateQuestionAnswering()
+    {
+        if(!string.IsNullOrWhiteSpace(CurrentSentence)){
+            requestResponse = await Http.GetFromJsonAsync<RequestResponse>($"http://localhost:5082/api/TextGeneration/generate-information-extraction-decision?sentence={CurrentSentence}");         
+        }
+    }
+    private async Task GenerateTextTranslation()
+    {
+        // Check if ANY of the fields have content.  You can adjust this
+        // to require all fields, or any combination as needed.
+        if (!string.IsNullOrWhiteSpace(CurrentSentence) || 
+            !string.IsNullOrWhiteSpace(Role) || 
+            !string.IsNullOrWhiteSpace(Response))
+        {
+            // If at least one field is filled out, make the API call
+            try
+            {
+                requestResponse = await Http.GetFromJsonAsync<RequestResponse>($"http://localhost:5082/api/TextGeneration/generate-text?text={Uri.EscapeDataString(CurrentSentence)}&actor={Uri.EscapeDataString(Role)}&response={Uri.EscapeDataString(Response)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                // Handle the error appropriately (e.g., show an error message)
+            }
+        }
+        else
+        {
+            // Only show the message if ALL fields are empty and the button is clicked.
+            if (string.IsNullOrWhiteSpace(CurrentSentence) && 
+                string.IsNullOrWhiteSpace(Role) && 
+                string.IsNullOrWhiteSpace(Response))
+            {
+                Console.WriteLine("All fields are empty. Please fill in the required fields.");
+                // Optionally, you could display a user-friendly message in the UI.
+            }
+        }
+    }
+    
+    public class RequestResponse {
+        public string? Message { get; set; }
+    }
+
+    public class NlpMultilingualText
+    {
+        public string? EnglishText { get; set; }
+        public string? SpanishText { get; set; }
+        public List<MultilingualEntity>? Entities { get; set; }
+        public List<MultilingualSentiment>? Sentiments { get; set; }
+        public List<MultilingualNounChunk>? NounChunks { get; set; }
+    }
+    
+    public class MultilingualEntity
+    {
+        public List<Entity>? English { get; set; }
+        public List<Entity>? Spanish { get; set; }
+    }
+
+    public class MultilingualNounChunk
+    {
+        public List<NounChunk>? English { get; set; }
+        public List<NounChunk>? Spanish { get; set; }
+    }
+
+    public class MultilingualSentiment
+    {
+        public List<Sentiment>? English { get; set; }
+        public List<Sentiment>? Spanish { get; set; }
+    }
+
+    public class PartOfSpeech{
+        public string? Text_ {get;set;}
+        public string? Lemma_ {get;set;}
+        public string? Pos_ {get;set;}
+        public string? Tag_ {get;set;}
+        public string? Dep_ {get;set;}
+        public string? Shape_ {get;set;}
+        public string? Is_Alpha {get;set;}
+        public string? Is_Stop {get;set;}
+    }
+
+    public class Entity
+    {
+        public int Id { get; set; }
+        public string? Text { get; set; }
+        public string? StartChat { get; set; }
+        public string? EndChar { get; set; }
+        public string? Label { get; set; }
+    }
+
+    public class NounChunk
+    {
+        public int Id { get; set; }
+        public string? Text { get; set; }
+        public string? RootText { get; set; }
+        public string? RootDep { get; set; }
+        public string? RootHead { get; set; }
+    }
+
+    public class Sentiment
+    {
+        public int Id { get; set; }
+        public string? Sentence { get; set; }
+        public string? Positive { get; set; }
+        public string? Negative { get; set; }
+        public string? Neutral { get; set; }
+        public string? Compound { get; set; }
+    }
+
+    public class GeneratedTextFeatures
+    {
+        public string? Text {get;set;}
+        public List<Sentiment>? Sentiments {get;set;}
+        public List<Entity>? Entities {get;set;}
+    }
+    
+}
